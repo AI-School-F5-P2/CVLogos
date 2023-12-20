@@ -8,7 +8,8 @@ import numpy as np
 import matplotlib.pyplot as plt
 from model_loader import load_model
 import os
-
+from pytube import YouTube
+from collections import Counter
 
 def load_image(uploaded_file):
     """
@@ -25,25 +26,6 @@ def preprocess_image(image, target_size=(640, 640)):
     image = cv2.resize(image, target_size)
     print(f"Imagen preprocesada: {image.shape}, tipo: {image.dtype}")  # Información de la imagen preprocesada
     return image
-
-
-
-"""
-def create_image_with_bboxes(image, detection):
-    # Convertir de BGR (OpenCV) a RGB
-    image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
-
-    # Convertir la imagen a un tensor de PyTorch
-    img_tensor = torch.tensor(image).permute(2, 0, 1)  # Reordenar los canales a CxHxW
-
-    # Dibujar las cajas delimitadoras
-    img_with_bboxes = draw_bounding_boxes(img_tensor, boxes=detection["boxes"], labels=detection["labels"], width=2)
-
-    # Convertir de vuelta a NumPy para visualización
-    img_with_bboxes_np = img_with_bboxes.permute(1, 2, 0).detach().numpy()
-    return img_with_bboxes_np
-
-"""
 
 
 def run_detection(model, image):
@@ -139,26 +121,60 @@ def process_video(video_file, model):
     output_path = os.path.join(output_folder, 'output.mp4')
     out = cv2.VideoWriter(output_path, fourcc, fps, (frame_width, frame_height))
 
-    frame_count = 0  # Contador de frames procesados
+    
+    all_detections = []  # Lista para almacenar detecciones de todos los frames
+
     while True:
         ret, frame = cap.read()
         if not ret:
-            print("Fin del video o no se pudo leer el frame.")
             break
 
-        #detections = run_detection(model, frame)
-        #frame_with_detections = draw_detections(frame, detections)
-        detections, original_size = run_detection(model, frame)  # Modificado aquí
-        frame_with_detections = draw_detections(frame, detections, original_size)  # Modificado aquí
+        detections, original_size = run_detection(model, frame)
+        frame_with_detections = draw_detections(frame, detections, original_size)
+        all_detections.extend(detections)  # Acumulando detecciones
 
         if frame_with_detections is not None:
             out.write(frame_with_detections)
-            frame_count += 1
-        else:
-            print("Frame procesado es None o inválido.")
 
     cap.release()
     out.release()
     print(f"Video guardado en {output_path}")
-    print(f"Total de frames procesados: {frame_count}")
-    return output_path
+    return all_detections, output_path
+
+
+def download_video_from_url(youtube_url):
+    try:
+        yt = YouTube(youtube_url)
+        video = yt.streams.filter(progressive=True, file_extension='mp4').order_by('resolution').desc().first()
+        return video.download()
+    except Exception as e:
+        print(f"Error al descargar el video: {e}")
+        return None
+    
+
+def calculate_bbox_area(x1, y1, x2, y2):
+    return (x2 - x1) * (y2 - y1)
+
+
+
+def generate_report(detections):
+    report_data = []
+    for det in detections:
+        x1, y1, x2, y2, conf, cls_name = det
+        bbox_area = (x2 - x1) * (y2 - y1)
+        report_data.append({
+            'Class': cls_name,
+            'Confidence': f"{conf:.2f}",
+            'BBox Coords': f"[{x1:.2f}, {y1:.2f}, {x2:.2f}, {y2:.2f}]",
+            'BBox Area': f"{bbox_area:.2f}"
+        })
+    return report_data
+
+
+
+def generate_summary(detections):
+    total_detections = len(detections)
+    class_counter = Counter([det[5] for det in detections])  # Contando detecciones por clase
+    summary = f"Total Detections: {total_detections}\n"
+    summary += "\n".join([f"{cls}: {count} detections" for cls, count in class_counter.items()])
+    return summary

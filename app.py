@@ -1,8 +1,11 @@
 import streamlit as st
 from model_loader import load_model
-from utils import load_image, run_detection, draw_detections, process_video
+from utils import load_image, run_detection, draw_detections, process_video, generate_summary
 import os
 import time
+from utils import download_video_from_url
+from utils import load_image, run_detection, draw_detections, process_video, generate_report
+import pandas as pd
 
 def main():
     st.title("OBJECT LOGO DETECTION")
@@ -26,7 +29,7 @@ def main():
     )
 
     # Selección del modo de la aplicación
-    app_mode = st.sidebar.selectbox('Choose the App Mode', ['About App', 'Run on Image', 'Run on Video'])
+    app_mode = st.sidebar.selectbox('Choose the App Mode', ['About App', 'Run on Image', 'Run on Video', 'Run on Video URL'])
 
     if app_mode == 'About App':
         st.markdown('In this project we are using **yoloV8** to do Object Detection (LOGOS) on Images and Videos and we are using **Streamlit** to create a Graphical User Interface.')
@@ -40,51 +43,97 @@ def main():
     elif app_mode == 'Run on Video':
         run_video_detection()
 
-"""
-def run_image_detection():
-    # Cargar y procesar imágenes
-    uploaded_file = st.file_uploader("Upload an Image", type=["png", "jpg", "jpeg"])
-    if uploaded_file is not None:
-        image = load_image(uploaded_file)
-        model = load_model()  # Asegúrate de que esta función esté correctamente definida en model_loader.py
-        detections = run_detection(model, image)
-        image_with_detections = draw_detections(image, detections)
-        st.image(image_with_detections, use_column_width=True)
-        print("Imagen con detecciones generada correctamente")
-"""
+    elif app_mode == 'Run on Video URL':
+            run_video_url_detection()
+
 
 def run_image_detection():
     uploaded_file = st.file_uploader("Upload an Image", type=["png", "jpg", "jpeg"])
     if uploaded_file is not None:
         image = load_image(uploaded_file)
-        detections, original_size = run_detection(load_model(), image)  # Obtener también el tamaño original
-        image_with_detections = draw_detections(image, detections, original_size)  # Pasar el tamaño original
+        model = load_model()
+        detections, original_size = run_detection(model, image)
+        image_with_detections = draw_detections(image, detections, original_size)
         st.image(image_with_detections, use_column_width=True)
-        print("Imagen con detecciones generada correctamente")
+
+        # Generar informe y mostrarlo como una tabla
+        report_data = generate_report(detections)
+        report_df = pd.DataFrame(report_data)
+        st.table(report_df)
+
+        # Generar y mostrar el resumen
+        summary = generate_summary(detections)
+        st.markdown("### Summary")
+        st.markdown(summary)
+
+        # Mostrar un gráfico de barras para las detecciones por clase
+        if 'Class' in report_df.columns:
+            class_counts = report_df['Class'].value_counts()
+            st.bar_chart(class_counts)
+
+
+        # Opcional: Mostrar un gráfico de barras para las detecciones por clase
+        #class_counts = report_df['Class'].value_counts()
+        #st.bar_chart(class_counts)
 
 
 
 def run_video_detection():
     uploaded_file = st.file_uploader("Upload a Video", type=["mp4", "avi"])
     if uploaded_file is not None:
-        st.write("Video cargado correctamente.")
         video_path = uploaded_file.name
         with open(video_path, "wb") as f:
             f.write(uploaded_file.getbuffer())
-            st.write("Video guardado temporalmente.")
+        st.write("Video cargado y guardado temporalmente.")
 
-        model = load_model()  # Asegúrate de que esta función esté correctamente definida en model_loader.py
-        process_video(video_path, model)
-        st.write("Video procesado exitosamente.")
+        model = load_model()
+        process_video(video_path, model)  # Esta función necesita ser adaptada para devolver detecciones
 
-        # Espera para asegurarse de que el archivo de video esté disponible
-        time.sleep(5)  # Espera 5 segundos
-
-        processed_video_path = os.path.abspath('runs/output.mp4')  # Ruta absoluta
+        # Aquí se asume que 'process_video' ahora devuelve detecciones junto con el path del video procesado
+        detections, processed_video_path = process_video(video_path, model)
         if os.path.exists(processed_video_path):
             st.video(processed_video_path)
-        else:
-            st.write("No se encontró el video procesado.")
+
+            # Generar y mostrar informe y resumen
+            report_data = generate_report(detections)
+            report_df = pd.DataFrame(report_data)
+            st.table(report_df)
+
+            summary = generate_summary(detections)
+            st.markdown("### Summary")
+            st.markdown(summary)
+
+            # Gráfico de barras (opcional)
+            if 'Class' in report_df.columns:
+                class_counts = report_df['Class'].value_counts()
+                st.bar_chart(class_counts)
+
+
+def run_video_url_detection():
+    video_url = st.text_input("Enter the video URL")
+    if video_url:
+        video_path = download_video_from_url(video_url)
+        if video_path:
+            model = load_model()
+            detections, processed_video_path = process_video(video_path, model)
+            if os.path.exists(processed_video_path):
+                st.video(processed_video_path)
+
+                # Generar y mostrar informe y resumen
+                report_data = generate_report(detections)
+                report_df = pd.DataFrame(report_data)
+                st.table(report_df)
+
+                summary = generate_summary(detections)
+                st.markdown("### Summary")
+                st.markdown(summary)
+
+                # Gráfico de barras (opcional)
+                if 'Class' in report_df.columns:
+                    class_counts = report_df['Class'].value_counts()
+                    st.bar_chart(class_counts)
+
+
 
 
 if __name__ == '__main__':
