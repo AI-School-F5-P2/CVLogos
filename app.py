@@ -6,6 +6,8 @@ import time
 from utils import download_video_from_url
 from utils import load_image, run_detection, draw_detections, process_video, generate_report
 import pandas as pd
+import subprocess
+
 
 def main():
     st.title("OBJECT LOGO DETECTION")
@@ -87,10 +89,9 @@ def run_video_detection():
         st.write("Video cargado y guardado temporalmente.")
 
         model = load_model()
-        process_video(video_path, model)  # Esta función necesita ser adaptada para devolver detecciones
+        detections, processed_video_path = process_video(video_path, model)
 
         # Aquí se asume que 'process_video' ahora devuelve detecciones junto con el path del video procesado
-        detections, processed_video_path = process_video(video_path, model)
         if os.path.exists(processed_video_path):
             st.video(processed_video_path)
 
@@ -113,26 +114,45 @@ def run_video_url_detection():
     video_url = st.text_input("Enter the video URL")
     if video_url:
         video_path = download_video_from_url(video_url)
-        if video_path:
-            model = load_model()
-            detections, processed_video_path = process_video(video_path, model)
-            if os.path.exists(processed_video_path):
-                st.video(processed_video_path)
+        if video_path and os.path.exists(video_path):
+            # El archivo de video existe y se descargó correctamente
 
-                # Generar y mostrar informe y resumen
-                report_data = generate_report(detections)
-                report_df = pd.DataFrame(report_data)
-                st.table(report_df)
+            output_folder = 'downloads'
+            output_video_path = os.path.join(output_folder, "converted_video.mp4")
 
-                summary = generate_summary(detections)
-                st.markdown("### Summary")
-                st.markdown(summary)
+            # Comando para convertir el video a formato .mp4
+            ffmpeg_command = f"ffmpeg -i {video_path} {output_video_path}"
+            print(f"Ejecutando comando FFmpeg: {ffmpeg_command}")
 
-                # Gráfico de barras (opcional)
-                if 'Class' in report_df.columns:
-                    class_counts = report_df['Class'].value_counts()
-                    st.bar_chart(class_counts)
+            # Ejecuta el comando FFmpeg y captura la salida
+            process = subprocess.run(ffmpeg_command, shell=True, capture_output=True, text=True)
+            if process.returncode != 0:
+                # Si hubo un error en la conversión
+                print(f"Error en FFmpeg: {process.stderr}")
+            else:
+                # Si la conversión fue exitosa
+                print(f"Video convertido exitosamente: {output_video_path}")
 
+                model = load_model()
+                detections, processed_video_path = process_video(output_video_path, model)
+
+                if processed_video_path and os.path.exists(processed_video_path):
+                    st.video(processed_video_path)
+
+                    # Generar y mostrar informe y resumen
+                    report_data = generate_report(detections)
+                    report_df = pd.DataFrame(report_data)
+                    st.table(report_df)
+
+                    summary = generate_summary(detections)
+                    st.markdown("### Summary")
+                    st.markdown(summary)
+
+                    if 'Class' in report_df.columns:
+                        class_counts = report_df['Class'].value_counts()
+                        st.bar_chart(class_counts)
+        else:
+            st.text("Error: Video not found.")
 
 
 

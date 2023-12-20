@@ -10,6 +10,8 @@ from model_loader import load_model
 import os
 from pytube import YouTube
 from collections import Counter
+import subprocess
+
 
 def load_image(uploaded_file):
     """
@@ -111,11 +113,14 @@ def process_video(video_file, model):
     cap = cv2.VideoCapture(video_file)
     if not cap.isOpened():
         print("Error al abrir el archivo de video.")
-        return None
+        return [], None  # Devuelve una lista vacía y None
+    else:
+        print(f"Video abierto correctamente: {video_file}")
+        frame_width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
+        frame_height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
+        fps = cap.get(cv2.CAP_PROP_FPS)
+        print(f"Dimensiones del Video: {frame_width}x{frame_height}, FPS: {fps}")
 
-    frame_width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
-    frame_height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
-    fps = cap.get(cv2.CAP_PROP_FPS)
 
     fourcc = cv2.VideoWriter_fourcc(*'mp4v')
     output_path = os.path.join(output_folder, 'output.mp4')
@@ -146,7 +151,17 @@ def download_video_from_url(youtube_url):
     try:
         yt = YouTube(youtube_url)
         video = yt.streams.filter(progressive=True, file_extension='mp4').order_by('resolution').desc().first()
-        return video.download()
+        if not video:
+            print("No se encontró un stream adecuado para la descarga.")
+            return None
+
+        output_folder = 'downloads'
+        if not os.path.exists(output_folder):
+            os.makedirs(output_folder)
+
+        output_path = os.path.join(output_folder, "downloaded_video.mp4")
+        video.download(filename=output_path)
+        return output_path
     except Exception as e:
         print(f"Error al descargar el video: {e}")
         return None
@@ -178,3 +193,5 @@ def generate_summary(detections):
     summary = f"Total Detections: {total_detections}\n"
     summary += "\n".join([f"{cls}: {count} detections" for cls, count in class_counter.items()])
     return summary
+
+
