@@ -1,6 +1,6 @@
 import streamlit as st
 from model_loader import load_model
-from utils import load_image, run_detection, draw_detections, process_video, generate_summary
+from utils import load_image, run_detection, draw_detections, process_video, generate_summary, clean_filename
 import os
 import time
 from utils import download_video_from_url
@@ -86,10 +86,15 @@ def run_video_detection():
         video_path = uploaded_file.name
         with open(video_path, "wb") as f:
             f.write(uploaded_file.getbuffer())
-        st.write("Video cargado y guardado temporalmente.")
+        st.write("Your video is processing. Please, Wait.")
 
         model = load_model()
-        detections, processed_video_path = process_video(video_path, model)
+        #detections, processed_video_path = process_video(video_path, model)
+        
+        output_filename = os.path.basename(video_path)  # Nombre del archivo de salida igual al de entrada
+        detections, processed_video_path = process_video(video_path, model, output_filename)
+
+
 
         # Aquí se asume que 'process_video' ahora devuelve detecciones junto con el path del video procesado
         if os.path.exists(processed_video_path):
@@ -113,28 +118,32 @@ def run_video_detection():
 def run_video_url_detection():
     video_url = st.text_input("Enter the video URL")
     if video_url:
-        video_path = download_video_from_url(video_url)
+        video_path, video_title = download_video_from_url(video_url)
         if video_path and os.path.exists(video_path):
             # El archivo de video existe y se descargó correctamente
 
             output_folder = 'downloads'
-            output_video_path = os.path.join(output_folder, "converted_video.mp4")
-
+            converted_video_path = os.path.join(output_folder, f"video_title.mp4")
+            
             # Comando para convertir el video a formato .mp4
-            ffmpeg_command = f"ffmpeg -i {video_path} {output_video_path}"
+
+            ffmpeg_command = f'ffmpeg -i "{video_path}" "{converted_video_path}"'
             print(f"Ejecutando comando FFmpeg: {ffmpeg_command}")
 
             # Ejecuta el comando FFmpeg y captura la salida
             process = subprocess.run(ffmpeg_command, shell=True, capture_output=True, text=True)
+            print("algo")
+            
             if process.returncode != 0:
                 # Si hubo un error en la conversión
                 print(f"Error en FFmpeg: {process.stderr}")
             else:
                 # Si la conversión fue exitosa
-                print(f"Video convertido exitosamente: {output_video_path}")
+                print(f"Video convertido exitosamente: {converted_video_path}")
 
                 model = load_model()
-                detections, processed_video_path = process_video(output_video_path, model)
+                output_filename = f"{video_title}_procesado.mp4"  # Usa el título del video como nombre de archivo
+                detections, processed_video_path = process_video(converted_video_path, model, output_filename)
 
                 if processed_video_path and os.path.exists(processed_video_path):
                     st.video(processed_video_path)

@@ -74,38 +74,7 @@ def draw_detections(image, detections, original_size):
     return image
 
 
-"""
-def draw_detections(image, detections):
-    # Obtiene las dimensiones de la imagen
-    image_height, image_width, _ = image.shape
-
-    # Dibuja los cuadros delimitadores y etiquetas de las detecciones en la imagen.
-    for detection in detections:
-        # Asumiendo que cada 'detection' es un tensor con la forma [x1, y1, x2, y2, conf, cls]
-        x1, y1, x2, y2, conf, cls = int(detection[0].item()), int(detection[1].item()), int(detection[2].item()), int(detection[3].item()), detection[4], detection[5]
-
-        # Calcula las coordenadas para centrar el cuadro en el objeto detectado
-        width = x2 - x1
-        height = y2 - y1
-        center_x = x1 + width // 2
-        center_y = y1 + height // 2
-        new_x1 = max(0, center_x - width // 2)
-        new_x2 = min(image_width - 1, center_x + width // 2)
-        new_y1 = max(0, center_y - height // 2)
-        new_y2 = min(image_height - 1, center_y + height // 2)
-
-        label = f'{cls} {conf:.2f}'  # Ajusta esto según tus etiquetas de clase
-
-        # Dibuja el cuadro delimitador y la etiqueta en la imagen
-        cv2.rectangle(image, (new_x1, new_y1), (new_x2, new_y2), (0, 255, 0), 2)
-        cv2.putText(image, label, (new_x1, new_y1 - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.9, (0, 255, 0), 2)
-        print(f"Dibujando cuadro: {new_x1}, {new_y1}, {new_x2}, {new_y2}, clase: {cls}, confianza: {conf:.2f}")
-
-    return image"""
-
-
-
-def process_video(video_file, model):
+def process_video(video_file, model, output_filename):
     output_folder = 'runs'
     if not os.path.exists(output_folder):
         os.makedirs(output_folder)
@@ -113,17 +82,17 @@ def process_video(video_file, model):
     cap = cv2.VideoCapture(video_file)
     if not cap.isOpened():
         print("Error al abrir el archivo de video.")
-        return [], None  # Devuelve una lista vacía y None
-    else:
-        print(f"Video abierto correctamente: {video_file}")
-        frame_width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
-        frame_height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
-        fps = cap.get(cv2.CAP_PROP_FPS)
-        print(f"Dimensiones del Video: {frame_width}x{frame_height}, FPS: {fps}")
+        return [], None
+    
+    print(f"Video abierto correctamente: {video_file}")
+    frame_width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
+    frame_height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
+    fps = cap.get(cv2.CAP_PROP_FPS)
+    print(f"Dimensiones del Video: {frame_width}x{frame_height}, FPS: {fps}")
 
 
     fourcc = cv2.VideoWriter_fourcc(*'mp4v')
-    output_path = os.path.join(output_folder, 'output.mp4')
+    output_path = os.path.join(output_folder, output_filename)
     out = cv2.VideoWriter(output_path, fourcc, fps, (frame_width, frame_height))
 
     
@@ -138,13 +107,18 @@ def process_video(video_file, model):
         frame_with_detections = draw_detections(frame, detections, original_size)
         all_detections.extend(detections)  # Acumulando detecciones
 
-        if frame_with_detections is not None:
-            out.write(frame_with_detections)
+        #if frame_with_detections is not None:
+        out.write(frame_with_detections)
 
     cap.release()
     out.release()
     print(f"Video guardado en {output_path}")
     return all_detections, output_path
+
+def clean_filename(filename):
+    safe_chars = "-_.() "  # Puedes añadir más caracteres seguros si es necesario
+    cleaned_filename = ''.join(c for c in filename if c.isalnum() or c in safe_chars).rstrip()
+    return cleaned_filename
 
 
 def download_video_from_url(youtube_url):
@@ -153,18 +127,19 @@ def download_video_from_url(youtube_url):
         video = yt.streams.filter(progressive=True, file_extension='mp4').order_by('resolution').desc().first()
         if not video:
             print("No se encontró un stream adecuado para la descarga.")
-            return None
+            return None, None
 
         output_folder = 'downloads'
         if not os.path.exists(output_folder):
             os.makedirs(output_folder)
 
-        output_path = os.path.join(output_folder, "downloaded_video.mp4")
+        video_title = clean_filename(yt.title)  # Limpia el título del video
+        output_path = os.path.join(output_folder, f"{video_title}.mp4")
         video.download(filename=output_path)
-        return output_path
+        return output_path, video_title
     except Exception as e:
         print(f"Error al descargar el video: {e}")
-        return None
+        return None, None
     
 
 def calculate_bbox_area(x1, y1, x2, y2):
