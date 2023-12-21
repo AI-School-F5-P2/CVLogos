@@ -7,9 +7,8 @@ import pandas as pd
 import subprocess
 from PIL import Image
 from model_loader import load_model
-from utils import load_image, run_detection, draw_detections, process_video, generate_summary, clean_filename
+from utils import load_image, run_detection, draw_detections, process_video, generate_summary, clean_filename, generate_report
 from utils import download_video_from_url
-from utils import load_image, run_detection, draw_detections, process_video, generate_report
 
 path_to_banner = '/Users/karlalamus/Desktop/CURSO_IA/CVLogos/banner.png'
 
@@ -179,23 +178,30 @@ def run_video_url_detection():
         if video_path and os.path.exists(video_path):
             # El archivo de video existe y se descargó correctamente
 
+
             output_folder = 'downloads'
             converted_video_path = os.path.join(output_folder, f"video_title.mp4")
             
+            # Verifica si el archivo de salida existe y elimínalo si es necesario
+            if os.path.exists(converted_video_path):
+                os.remove(converted_video_path)
+
             # Comando para convertir el video a formato .mp4
 
             ffmpeg_command = f'ffmpeg -i "{video_path}" "{converted_video_path}"'
             print(f"Ejecutando comando FFmpeg: {ffmpeg_command}")
 
             # Ejecuta el comando FFmpeg y captura la salida
-            process = subprocess.run(ffmpeg_command, shell=True, capture_output=True, text=True)
-            print("algo")
+            process = subprocess.Popen(ffmpeg_command, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+
+            stdout, stderr = process.communicate()
             
             if process.returncode != 0:
                 # Si hubo un error en la conversión
                 print(f"Error en FFmpeg: {process.stderr}")
             else:
                 # Si la conversión fue exitosa
+                print(f"Salida de FFmpeg: {process.stdout}")
                 print(f"Video convertido exitosamente: {converted_video_path}")
 
                 model = load_model()
