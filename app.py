@@ -1,17 +1,48 @@
 import streamlit as st
-from model_loader import load_model
-from utils import load_image, run_detection, draw_detections, process_video, generate_summary, clean_filename
 import os
 import time
-from utils import download_video_from_url
-from utils import load_image, run_detection, draw_detections, process_video, generate_report
 import pandas as pd
 import subprocess
+from PIL import Image
+from model_loader import load_model
+from utils import load_image, run_detection, draw_detections, process_video, generate_summary, clean_filename
+from utils import download_video_from_url
+from utils import load_image, run_detection, draw_detections, process_video, generate_report
 
+path_to_banner = 'C:/Users/FACTORIA F5/CVLogos/CVLogos/banner.png'
 
-def main():
-    st.title("OBJECT LOGO DETECTION")
-    st.sidebar.title("Settings")
+def home_page():
+    st.image(Image.open(path_to_banner), width=1120)
+    st.title("Logo Detection App")
+    st.markdown("""
+        <div style="text-align: justify;">
+                
+**BrandHunter** is a logo detection application that utilizes artificial intelligence technology to analyze videos and evaluate the presence of brands on screen. The application empowers users to upload images or videos, generating comprehensive reports that summarize the logo detections and a chart depicting the frequency of each logo's appearance in the video. Additionally, a summary provides insights into the visibility of the brands featured in the video.
+        
+**How to Use It:**
+
+1. **Navigate to the BrandHunter website.**
+
+2. **Expand the sidebar to explore the diverse options.**
+
+3. **Select the detection mode that suits your needs.**
+    * **For Images:** Detect logos in an image.
+    * **For Videos:** Identify logos in a video.
+    * **For Video URLs:** Unearth logos from a video linked to a URL.
+
+4. **Upload the image, video, or URL you're eager to analyze.**
+
+5. **Initiate the detection process by clicking the "Detect" button.**
+
+6. **The application seamlessly generates a report that encapsulates the logo detections.**
+
+Now that you know how to use it, it's time to get started!
+
+Select an option...
+        </div>
+    """, unsafe_allow_html=True)
+
+    st.sidebar.title("Controls")
     st.sidebar.subheader("Parameters")
 
     # Configuración de la barra lateral
@@ -19,10 +50,10 @@ def main():
         """
         <style>
         [data-testid="stSidebar"][aria-expanded="true"] > div:first-child {
-            width: 300px;
+            width: 250px;
         }
         [data-testid="stSidebar"][aria-expanded="false"] > div:first-child {
-            width: 300px;
+            width: 280px;
             margin-left:-300px;
         }
         </style>
@@ -30,23 +61,46 @@ def main():
         unsafe_allow_html=True,
     )
 
-    # Selección del modo de la aplicación
-    app_mode = st.sidebar.selectbox('Choose the App Mode', ['About App', 'Run on Image', 'Run on Video', 'Run on Video URL'])
+    # Barra desplegable
+    app_mode = st.sidebar.selectbox('Choose the App Mode', ['Select a option','Run on Image', 'Run on Video', 'Run on Video URL'])
 
-    if app_mode == 'About App':
-        st.markdown('In this project we are using **yoloV8** to do Object Detection (LOGOS) on Images and Videos and we are using **Streamlit** to create a Graphical User Interface.')
-
-    elif app_mode == 'Run on Image':
+    if app_mode == 'Run on Image':
         run_image_detection()
-
-    # Dentro de app.py
-# Modifica la sección "Run on Video" de la siguiente manera:
 
     elif app_mode == 'Run on Video':
         run_video_detection()
 
     elif app_mode == 'Run on Video URL':
-            run_video_url_detection()
+        run_video_url_detection()
+
+def about_us_page():
+    st.image(Image.open(path_to_banner), width=1120)
+    st.title("About us")
+    st.markdown("""
+        <div style="text-align: justify;">
+        <b>BrandHunter leads the way in brand detection within the dynamic realm of advertising. Our team of artificial intelligence experts is pioneering innovative solutions,</b>
+        <p>harnessing the robust capabilities of YOLOv8, to analyze videos and evaluate brand presence on screen.</p>
+        
+        <b>With a forward-looking approach, BrandHunter is dedicated to providing comprehensive reports on brand visibility in audiovisual content. By leveraging state-of-the-art</b>
+        <b>technology, our objective is to optimize advertising strategy by delivering precise data on the exposure time of brands in videos.</b>
+
+        <b>At BrandHunter, we believe in the transformative power of artificial intelligence in advertising. We are committed to providing cutting-edge solutions that empower our clients to unlock </b> 
+        <b>the full potential of their brands. </b>
+                
+        <p>Discover unparalleled insights with BrandHunter!</p>
+        </div>
+    """, unsafe_allow_html=True)
+
+def main():
+    st.set_page_config(page_icon="🔎", page_title="BrandHunter", layout="wide")
+
+    pages = ["Home", "About Us"]
+    page = st.sidebar.selectbox("Select a page", pages)
+
+    if page == "Home":
+        home_page()
+    elif page == "About Us":
+        about_us_page()
 
 
 def run_image_detection():
@@ -78,8 +132,6 @@ def run_image_detection():
         #class_counts = report_df['Class'].value_counts()
         #st.bar_chart(class_counts)
 
-
-
 def run_video_detection():
     uploaded_file = st.file_uploader("Upload a Video", type=["mp4", "avi"])
     if uploaded_file is not None:
@@ -93,8 +145,6 @@ def run_video_detection():
         
         output_filename = os.path.basename(video_path)  # Nombre del archivo de salida igual al de entrada
         detections, processed_video_path = process_video(video_path, model, output_filename)
-
-
 
         # Aquí se asume que 'process_video' ahora devuelve detecciones junto con el path del video procesado
         if os.path.exists(processed_video_path):
@@ -162,8 +212,6 @@ def run_video_url_detection():
                         st.bar_chart(class_counts)
         else:
             st.text("Error: Video not found.")
-
-
 
 if __name__ == '__main__':
     try:
