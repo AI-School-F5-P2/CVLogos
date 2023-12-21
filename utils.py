@@ -169,4 +169,53 @@ def generate_summary(detections):
     summary += "\n".join([f"{cls}: {count} detections" for cls, count in class_counter.items()])
     return summary
 
+"""
+def run_webcam_detection(model):
+    cap = cv2.VideoCapture(0)  # '0' es usualmente la webcam integrada
+    
+    st.write("Press 'Q' to exit")
+
+    while True:
+        ret, frame = cap.read()
+        if not ret:
+            break
+
+        # Procesamiento del frame
+        detections, original_size = run_detection(model, frame)
+        frame_with_detections = draw_detections(frame, detections, original_size)
+
+        # Convertir a PIL Image y mostrar en Streamlit
+        frame_with_detections = Image.fromarray(frame_with_detections)
+        st.image(frame_with_detections, use_column_width=True)
+
+        if cv2.waitKey(1) & 0xFF == ord('q'):
+            break
+
+    cap.release()
+    cv2.destroyAllWindows()
+"""
+
+def run_webcam_detection(model):
+    cap = cv2.VideoCapture(0)  # '0' es usualmente la webcam integrada
+    frame_holder = st.empty()  # Crear un contenedor para el marco de imagen
+
+    stop_button = st.button("Stop")  # Botón para detener la captura de la cámara
+
+    while not stop_button:
+        ret, frame = cap.read()
+        if not ret:
+            break
+
+        # Convertir de BGR a RGB
+        frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+
+        # Procesamiento del frame
+        detections, original_size = run_detection(model, frame)
+        frame_with_detections = draw_detections(frame, detections, original_size)
+
+        # Convertir a PIL Image y mostrar en Streamlit
+        frame_with_detections = Image.fromarray(frame_with_detections)
+        frame_holder.image(frame_with_detections, use_column_width=True)
+
+    cap.release()
 

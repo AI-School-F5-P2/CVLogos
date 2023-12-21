@@ -1,6 +1,6 @@
 import streamlit as st
 from model_loader import load_model
-from utils import load_image, run_detection, draw_detections, process_video, generate_summary, clean_filename
+from utils import load_image, run_detection, draw_detections, process_video, generate_summary, clean_filename, run_webcam_detection
 import os
 import time
 from utils import download_video_from_url
@@ -31,7 +31,7 @@ def main():
     )
 
     # Selección del modo de la aplicación
-    app_mode = st.sidebar.selectbox('Choose the App Mode', ['About App', 'Run on Image', 'Run on Video', 'Run on Video URL'])
+    app_mode = st.sidebar.selectbox('Choose the App Mode', ['About App', 'Run on Image', 'Run on Video', 'Run on Video URL', 'Run on Webcam'])
 
     if app_mode == 'About App':
         st.markdown('In this project we are using **yoloV8** to do Object Detection (LOGOS) on Images and Videos and we are using **Streamlit** to create a Graphical User Interface.')
@@ -47,6 +47,10 @@ def main():
 
     elif app_mode == 'Run on Video URL':
             run_video_url_detection()
+
+    elif app_mode == 'Run on Webcam':
+        model = load_model()
+        run_webcam_detection(model)
 
 
 def run_image_detection():
