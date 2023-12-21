@@ -1,9 +1,6 @@
 import streamlit as st
-<<<<<<< HEAD
 from model_loader import load_model
 from utils import load_image, run_detection, draw_detections, process_video, generate_summary, clean_filename, run_webcam_detection
-=======
->>>>>>> db394dc4b85f6b9922fbbc8e3c5ce49e7f7c49c1
 import os
 import time
 import pandas as pd
@@ -14,7 +11,7 @@ from utils import load_image, run_detection, draw_detections, process_video, gen
 from utils import download_video_from_url
 from utils import load_image, run_detection, draw_detections, process_video, generate_report
 
-path_to_banner = 'C:/Users/FACTORIA F5/CVLogos/CVLogos/banner.png'
+path_to_banner = '/Users/karlalamus/Desktop/CURSO_IA/CVLogos/banner.png'
 
 def home_page():
     st.image(Image.open(path_to_banner), width=1120)
@@ -66,13 +63,8 @@ Select an option...
         unsafe_allow_html=True,
     )
 
-<<<<<<< HEAD
     # Selección del modo de la aplicación
     app_mode = st.sidebar.selectbox('Choose the App Mode', ['About App', 'Run on Image', 'Run on Video', 'Run on Video URL', 'Run on Webcam'])
-=======
-    # Barra desplegable
-    app_mode = st.sidebar.selectbox('Choose the App Mode', ['Select a option','Run on Image', 'Run on Video', 'Run on Video URL'])
->>>>>>> db394dc4b85f6b9922fbbc8e3c5ce49e7f7c49c1
 
     if app_mode == 'Run on Image':
         run_image_detection()
@@ -82,6 +74,10 @@ Select an option...
 
     elif app_mode == 'Run on Video URL':
         run_video_url_detection()
+
+    elif app_mode == 'Run on Webcam':
+        model = load_model()
+        run_webcam_detection(model)
 
 def about_us_page():
     st.image(Image.open(path_to_banner), width=1120)
@@ -112,9 +108,6 @@ def main():
     elif page == "About Us":
         about_us_page()
 
-    elif app_mode == 'Run on Webcam':
-        model = load_model()
-        run_webcam_detection(model)
 
 
 def run_image_detection():
